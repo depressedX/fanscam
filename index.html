@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>FansCam</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <meta content="zh-CN" http-equiv="Content-Language">
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <meta content="all" name="Robots">
+    <style>
+        html, body {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+
+        html {
+            background-color: black;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .FansCam {
+            width: 100%;
+            height: 100%;
+        }
+
+
+        /*底部bar*/
+        .bottom-bar {
+            display: grid;
+            padding: 0 36px;
+            width: 100%;
+            box-sizing: border-box;
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            grid-template-columns: 1fr 2fr 1fr;
+            align-items: center;
+        }
+
+        /*快门*/
+        .shutter-container {
+            text-align: center;
+        }
+
+
+        .shutter {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            border-radius: 50%;
+            border: 0;
+            padding: 0;
+            transition-duration: .2s;
+            transition-property: background-color;
+        }
+
+        .shutter:hover {
+            background-color: #dddddd;
+        }
+
+        .shutter:focus {
+            outline: none;
+        }
+
+
+        /*底部选择文件模块*/
+        .gallery-container {
+            justify-self: right;
+        }
+
+        .gallery {
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+
+        .gallery-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+
+        /*背景参考图*/
+        .bg-img {
+            position: absolute;
+            width: 100%;
+            left: 0;
+            top: 0;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /*camera相机显示video*/
+        .camera {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-position: center;
+            /*通过progressbar调节*/
+            opacity: 1;
+        }
+
+        .camera.flip {
+            transform: scaleX(-1);
+        }
+
+        /*透明度调节*/
+        .opacity-icon {
+            width: 30px;
+        }
+
+        /*顶部bar*/
+        .top-bar {
+            display: flex;
+            padding: 0 36px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /*透明度调节的top bar*/
+        .top-bar-opacity {
+            padding: 0 36px;
+            height: 30px;
+        }
+
+        .top-bar-opacity .progress {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .top-bar-opacity .progress-bar {
+            width: 100%;
+            height: 2px;
+            background-color: white;
+            position: absolute;
+            left: 0;
+            top: calc(50% - 1px);
+        }
+
+        .top-bar-opacity .progress-button {
+            padding: 16px;
+            position: absolute;
+            left: -26px;
+            top: calc(50% - 26px);
+
+        }
+
+        .top-bar-opacity .progress-button-inner {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background-color: black;
+
+        }
+
+
+        .top-bar-common {
+            transition-property: opacity;
+            transition-duration: 150ms;
+            transition-delay: 150ms;
+            width: 100%;
+            box-sizing: border-box;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            z-index: 1;
+        }
+
+        .top-bar-common.top-bar--hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition-property: opacity;
+            transition-duration: 150ms;
+            transition-delay: 0s;
+        }
+
+        img[src=""], img:not([src]) {
+            opacity: 0;
+        }
+
+    </style>
+    <meta content="谢叶青" name="Author">
+    <meta content="一款相机" name="Description">
+    <meta content="$copyright" name="Copyright">
+    <meta name="renderer" content="webkit">
+    <link href="favicon.ico" rel="Shortcut Icon">
+    <link href="favicon.ico" rel="Bookmark">
+</head>
+<body>
+<div class="FansCam">
+    <div class="top-bar-container">
+        <div class="top-bar top-bar-common">
+            <img src="images/opacity.png" alt="opacity" class="opacity-icon">
+        </div>
+        <div class="top-bar-opacity top-bar-common top-bar--hidden">
+            <div class="progress">
+                <div class="progress-bar"></div>
+                <div class="progress-button">
+                    <div class="progress-button-inner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <img src="" alt="bg-img" class="bg-img" id="bg-img">
+    <video id="camera" autoplay class="camera flip"></video>
+    <div class="bottom-bar">
+        <div class="placeholder"></div>
+        <div class="shutter-container">
+            <button class="shutter"></button>
+        </div>
+        <div class="gallery-container">
+            <div class="gallery" id="gallery">
+                <img src="images/gallery.png" class="gallery-avatar" alt="gallery">
+                <input type="file" accept="image/*" class="gallery-input" hidden id="gallery-input">
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let gallery = document.getElementById('gallery'),
+        galleryInput = document.getElementById('gallery-input'),
+        cameraVideo = document.getElementById('camera'),
+        bgImg = document.querySelector('.bg-img'),
+        shutterButton = document.querySelector('.shutter')
+
+
+    gallery.addEventListener('click', () => {
+        galleryInput.click()
+    })
+    galleryInput.addEventListener('change', e => {
+        let file = e.target.files[0]
+        if (!file) return false
+        bgImg.src = URL.createObjectURL(file)
+    })
+
+    let constraints = {
+        video: {facingMode: "user"},
+        // video: {facingMode: "environment"},
+        audio: false
+    }
+
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function (stream) {
+
+            let settings = stream.getVideoTracks()[0].getSettings()
+
+            cameraVideo.width = settings.width
+            cameraVideo.height = settings.height
+            cameraVideo.srcObject = stream
+            cameraVideo.onloadedmetadata = function (e) {
+                cameraVideo.play()
+            }
+
+        })
+        .catch(function (err) {
+            /* 处理error */
+            console.log(err.message)
+        });
+
+
+    function switchTo(target) {
+
+        Object.keys(topBars).forEach(key => {
+            topBars[key].classList.add('top-bar--hidden')
+        })
+
+        target.classList.remove('top-bar--hidden')
+    }
+
+    let topBarContainer = document.querySelector('.top-bar-container')
+
+    let topBars = {
+        topBarDefault: document.querySelector('.top-bar'),
+        topBarOpacity: document.querySelector('.top-bar-opacity')
+    }
+
+    let opacityIcon = document.querySelector('.opacity-icon')
+
+    opacityIcon.addEventListener('click', () => {
+        switchTo(topBars.topBarOpacity)
+    })
+
+
+    // 在任意位置点击（除了topBar）时，将topbar状态切换至默认
+    document.body.addEventListener('click', e => {
+        if (e.path.indexOf(topBarContainer) === -1) {
+            switchTo(topBars.topBarDefault)
+        }
+    })
+
+
+    function Progress(node, initialValue = 1) {
+        this.button = node.querySelector('.progress-button')
+        this.bar = node.querySelector('.progress-bar')
+        this.subscriberList = []
+
+        this.currentValue = initialValue
+
+        this.transformTo(initialValue)
+
+        let mouseMoveFunc = e => {
+            if (!controlling) return false
+            e = e.touches[0]
+
+            let barBoundingBox = this.bar.getBoundingClientRect()
+            let offset = Math.max(e.screenX, barBoundingBox.left)
+            offset = Math.min(offset, barBoundingBox.right)
+            offset = (offset - barBoundingBox.left) / barBoundingBox.width
+            this.transformTo(offset)
+            this.publish(offset)
+        }
+        let controlling = false
+        this.button.addEventListener('touchstart', () => {
+            controlling = true
+            console.log('touchstart')
+
+            document.body.addEventListener('touchend', () => {
+                controlling = false
+                this.button.removeEventListener('touchmove', mouseMoveFunc)
+            })
+        })
+        document.body.addEventListener('touchmove', mouseMoveFunc)
+
+        setTimeout(() => {
+
+            // 初始时publish一次
+            this.publish(initialValue)
+        })
+    }
+
+    Progress.prototype = {
+        constructor: Progress,
+        subscribe(func) {
+            this.subscriberList.push(func)
+        },
+        unsubscribe(func) {
+            let target = this.subscriberList.findIndex(v => v === func)
+            target && this.subscriberList.splice(target, 1)
+        },
+        publish(v) {
+            this.subscriberList.forEach(func => {
+                func(v)
+            })
+        },
+        getCurrentValue() {
+            return this.currentValue
+        },
+        transformTo(v) {
+
+            let barBoundingBox = this.bar.getBoundingClientRect(),
+                buttonBoundingBox = this.button.getBoundingClientRect()
+
+
+            this.button.style.transform = `translateX(${v * 100 * barBoundingBox.width / buttonBoundingBox.width}%)`
+        }
+    }
+
+    let opacityProgress = new Progress(document.querySelector('.top-bar-opacity .progress'), .7)
+
+
+    opacityProgress.subscribe(v => {
+        cameraVideo.style.opacity = v
+    })
+
+
+    function captureImageFromVideo(video, options = {}) {
+        return new Promise(resolve => {
+            let canvas = document.createElement("canvas");
+
+            let boxConstraint = options.boxConstraint
+            if (boxConstraint) {
+
+                if (typeof boxConstraint === "boolean" || boxConstraint instanceof Boolean)
+                    boxConstraint = {
+                        width: 200,
+                        height: 200
+                    }
+                else
+                    boxConstraint = {
+                        width: boxConstraint.width,
+                        height: boxConstraint.height
+                    }
+
+            } else {
+                boxConstraint = {width: video.videoWidth, height: video.videoHeight}
+            }
+
+            if (video.videoHeight / video.videoWidth > boxConstraint.height / boxConstraint.width) {
+                // 较高
+                canvas.height = boxConstraint.height
+                canvas.width = canvas.height * video.videoWidth / video.videoHeight
+            } else {
+                canvas.width = boxConstraint.width
+                canvas.height = canvas.width * video.videoHeight / video.videoWidth
+            }
+
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+
+            canvas.toBlob(blob => {
+                resolve(new File([blob], `video_capture_${Date.now()}`, {lastModified: Date.now()}))
+            }, "image/jpeg")
+        })
+    }
+
+    shutterButton.addEventListener('click', e => {
+        captureImageFromVideo(cameraVideo).then(img => {
+            window.open(URL.createObjectURL(img),'_blank')
+        })
+    })
+
+
+</script>
+</body>
+</html>
